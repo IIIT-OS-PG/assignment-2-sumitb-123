@@ -26,10 +26,6 @@ int main(){
 	//accept the client requests
 	int client_socket = accept(svr_socket, NULL, NULL);
 	while(1){	
-		//listening to respond
-		//listen(svr_socket,1);
-		//accept the client requests
-		//int client_socket = accept(svr_socket, NULL, NULL);
 		//receiving the request from the client
 		recv(client_socket, response, sizeof(response),0);
 		//printing the request
@@ -38,8 +34,6 @@ int main(){
 		cin.getline(response,sizeof(response));
 		//sending the data to the client
 		send(client_socket, response, sizeof(response), 0);
-		//closing the client socket
-		//close(client_socket);
 	}
 	//closing the client socket
 	close(client_socket);

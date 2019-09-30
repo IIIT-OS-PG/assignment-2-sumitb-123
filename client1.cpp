@@ -4,7 +4,6 @@
 #include<unistd.h>
 #include<string.h>
 #include <iostream>
-#include <string>
 #define BUFF_SIZE 1024
 #define port 9000
 using namespace std;
@@ -23,43 +22,21 @@ int main(){
 	server.sin_addr.s_addr = inet_addr("127.0.0.1");
 	
 	//connecting to the server
-	int status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
+	int status;/* = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
 	if(status<0){
 		cout<<"Error in connection establishment "<<endl;
-	}
+	}*/
 	//buffer for reading response from the server
 	char response[1024];
+	int temp;
 	string filename;
-	cout<<"starting communication "<<endl;
-    cin>>filename;
-    /*int status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
-    if(status<0){
-        cout<<"Error in connection establishment "<<endl;
-    }*/
-
-    FILE *fp = fopen(filename.c_str(),"rb");
-    fseek (fp,0,SEEK_END);
-    int size = ftell(fp);
-    rewind (fp);
-    send (svr_socket,&size,sizeof(size), 0);
-    char Buffer[BUFF_SIZE] ;
-    int n;
-    while ((n= fread(Buffer,sizeof(char),BUFF_SIZE,fp)) > 0 && size > 0 ){
-        cout<<n<<endl;
-        send (svr_socket,Buffer, n, 0);
-        memset( Buffer , '\0', BUFF_SIZE);
-        size = size - n ;
-    }
-    cout<<"closing the file"<<endl;
-    fclose(fp);
-
-	/*while(1){
-		cout<<"starting communication "<<endl;
+	while(1){
+		cout<<"Enter the filename "<<endl;
 		cin>>filename;
-		int status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
-		if(status<0){
-			cout<<"Error in connection establishment "<<endl;
-		}
+		status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
+    	if(status<0){
+    	    cout<<"Error in connection establishment "<<endl;
+	    }
 
 		FILE *fp = fopen(filename.c_str(),"rb");
 	    fseek (fp,0,SEEK_END);
@@ -69,18 +46,16 @@ int main(){
 		char Buffer[BUFF_SIZE] ;
 		int n;
 		while ((n= fread(Buffer,sizeof(char),BUFF_SIZE,fp)) > 0 && size > 0 ){
-			cout<<n<<endl;
+			cout<<Buffer<<endl;
 			send (svr_socket,Buffer, n, 0);
    	 		memset( Buffer , '\0', BUFF_SIZE);
 			size = size - n ;
 		}
 		cout<<"closing the file"<<endl;
 		fclose(fp);
-		//closing the socket
-		//close(svr_socket);
-
-	}*/
+		close(svr_socket);
+	}
 	//closing the socket
-	close(svr_socket);
+	//close(svr_socket);
 return 0;
 }
