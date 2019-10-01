@@ -22,9 +22,7 @@ void *fileRead(void *sock){
     recv(client_socket, &file_size, sizeof(file_size), 0);
     cout<<"file size received "<<file_size<<endl;
     while ((n=recv(client_socket,Buffer,BUFF_SIZE,0))>0 && file_size>0){
-        //cout<<Buffer<<" n "<<n<<endl;
         fwrite(Buffer, sizeof(char), n, fp);
-        memset(Buffer,'\0', BUFF_SIZE);
         file_size = file_size - n;
     }
     cout<<"file is closed"<<endl;
@@ -36,6 +34,7 @@ void *fileRead(void *sock){
 
 //int socket(int domain, int type, int protocol);
 int main(){
+
 	int svr_socket;
 	pthread_t thread[10]; 
 	char response[1024] = "this is the response from the server";
@@ -52,9 +51,6 @@ int main(){
 	bind(svr_socket, (struct sockaddr*) &server, sizeof(server));
 	//listening to respond
 	listen(svr_socket,10);
-	//accept the client requests
-	//int client_socket;
-	//client_socket = accept (svr_socket, (struct sockaddr *)&server, (socklen_t*)&addrlen);
 	int temp,i=0,sts;
 	string filename;
 	while(1){
@@ -63,12 +59,10 @@ int main(){
 		int client_socket = accept(svr_socket, (struct sockaddr *)&server, (socklen_t*)&addrlen);
 		sts = pthread_create(&thread[i], NULL, fileRead, &client_socket); 
 		i++;
-		//close(client_socket);
-		//cout<<"communication closed"<<endl;
 	}
 
 	//closing the socket
 	close(svr_socket);
 
-return 0;
+	return 0;
 }
