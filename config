@@ -1,2 +1,7 @@
-this is a test file to test if transfer of file is working or not
-new line added 
+tracker1
+ip 127.0.0.1 
+port 9000
+
+tracker2
+ip 127.0.0.1 
+port 9001

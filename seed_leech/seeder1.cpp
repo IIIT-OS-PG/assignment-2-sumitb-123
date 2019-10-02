@@ -12,26 +12,35 @@ using namespace std;
 int fl = 0;
 
 void *fileRead(void *sock){
-
+	
+	char Buffer[BUFF_SIZE];
+    int file_size,n,size;
 	cout<<"inside the thread"<<endl;
 	int client_socket = *((int *)sock);
-	string filename = "rfile"+to_string(++fl);
-	FILE *fp = fopen(filename.c_str(), "wb");
-    char Buffer[BUFF_SIZE];
-    int file_size,n;
-    recv(client_socket, &file_size, sizeof(file_size), 0);
-    cout<<"file size received "<<file_size<<endl;
-    while ((n=recv(client_socket,Buffer,BUFF_SIZE,0))>0 && file_size>0){
-        fwrite(Buffer, sizeof(char), n, fp);
-        file_size = file_size - n;
+    recv(client_socket, Buffer, BUFF_SIZE, 0);
+	FILE *fp = fopen(Buffer,"rb");
+    fseek (fp,0,SEEK_END);
+    size = ftell(fp);
+    rewind (fp);
+	send (client_socket,&size,sizeof(size), 0);
+	cout<<Buffer<<endl;
+	memset(Buffer,'\0', BUFF_SIZE);
+
+	while ((n= fread(Buffer,sizeof(char),BUFF_SIZE,fp)) > 0 && size > 0 ){
+        send (client_socket,Buffer, n, 0);
+        size = size - n ;
     }
-    cout<<"file is closed"<<endl;
+
+    cout<<"closing the file"<<endl;
     fclose(fp);
 	close(client_socket);
 	pthread_exit(NULL);
 
 }
 
+/*void downloadFile(string filename, string clientname, ){
+	
+}*/
 /*string getIp(string filepath){
 	
 	FILE *fp = fopen(filename.c_str(), "rb");

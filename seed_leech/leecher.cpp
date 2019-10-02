@@ -29,10 +29,14 @@ int main(){
 		cout<<"Error in connection establishment "<<endl;
 	}
 	//buffer for reading response from the server
-	char response[BUFF_SIZE];
+	char response[1024];
 	string filename;
 	cout<<"starting communication "<<endl;
     cin>>filename;
+    /*int status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
+    if(status<0){
+        cout<<"Error in connection establishment "<<endl;
+    }*/
 	int j = 0;
 	char fname[nm];
 	while(filename[j]){
@@ -50,6 +54,11 @@ int main(){
 
     char Buffer[BUFF_SIZE] ;
     int n;
+    /*while ((n= fread(Buffer,sizeof(char),BUFF_SIZE,fp)) > 0 && size > 0 ){
+        //cout<<n<<endl;
+        send (svr_socket,Buffer, n, 0);
+        size = size - n ;
+    }*/
 	int file_size;
 	recv(svr_socket, &file_size, sizeof(file_size), 0);
 	while ((n=recv(svr_socket,Buffer,BUFF_SIZE,0))>0 && file_size>0){
@@ -59,5 +68,34 @@ int main(){
     cout<<"closing the file"<<endl;
     fclose(fp1);
 
+	/*while(1){
+		cout<<"starting communication "<<endl;
+		cin>>filename;
+		int status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
+		if(status<0){
+			cout<<"Error in connection establishment "<<endl;
+		}
+
+		FILE *fp = fopen(filename.c_str(),"rb");
+	    fseek (fp,0,SEEK_END);
+    	int size = ftell(fp);
+	    rewind (fp);
+		send (svr_socket,&size,sizeof(size), 0);
+		char Buffer[BUFF_SIZE] ;
+		int n;
+		while ((n= fread(Buffer,sizeof(char),BUFF_SIZE,fp)) > 0 && size > 0 ){
+			cout<<n<<endl;
+			send (svr_socket,Buffer, n, 0);
+   	 		memset( Buffer , '\0', BUFF_SIZE);
+			size = size - n ;
+		}
+		cout<<"closing the file"<<endl;
+		fclose(fp);
+		//closing the socket
+		//close(svr_socket);
+
+	}*/
+	//closing the socket
+	close(svr_socket);
 return 0;
 }
