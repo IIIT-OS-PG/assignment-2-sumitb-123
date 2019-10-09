@@ -5,69 +5,106 @@
 #include <string.h>
 #include <iostream>
 #include<pthread.h>
-#define port 9000
+#include<fstream>
 #define BUFF_SIZE 1024
+#define def_ip "127.0.0.1"
+#define def_port 11123
+#define trd 100
 using namespace std;
-
+int port = def_port;
 int fl = 0;
+string ip = def_ip;
 
-void *fileRead(void *sock){
+//method to parse the info file and set ip and port 
+void parseFile(char *filename, int tno){
+	
+	char fname[trd];
+	ifstream rfile;
+	int i,item=0;
+	string temp="",temp1,temp2;
+	rfile.open(filename);
+	while(tno--){
+		rfile>>temp1>>temp2;
+		//cout<<"from the file "<<temp1<<" "<<temp2<<endl;
+	}
+	i = 0;
+	//extracting ip and port of tracker from info file
+	ip = temp1;
+	port = stoi(temp2);
+	while(fname[i]){
+		if(fname[i] != ' ')
+			temp+=fname[i];
+		else{
+			item++;
+			if(item == 1){
+				cout<<"temp "<<temp<<endl;
+			}
+			else if(item == 2){
+				cout<<"temp "<<temp<<endl;
+			}
+			temp = "";
+		}
+		i++;
+		//cout<<fname[i];
+	}
+	//cout<<" ip "<<ip<<" port "<<port<<endl;
+}
 
-	cout<<"inside the thread"<<endl;
-	int client_socket = *((int *)sock);
-	string filename = "rfile"+to_string(++fl);
-	FILE *fp = fopen(filename.c_str(), "wb");
-    char Buffer[BUFF_SIZE];
-    int file_size,n;
-    recv(client_socket, &file_size, sizeof(file_size), 0);
-    cout<<"file size received "<<file_size<<endl;
-    while ((n=recv(client_socket,Buffer,BUFF_SIZE,0))>0 && file_size>0){
-        fwrite(Buffer, sizeof(char), n, fp);
-        file_size = file_size - n;
+void *trackerServer(void *sock){
+
+    int svr_socket;
+    pthread_t thread[trd];
+    char response[BUFF_SIZE];
+    //creating socket for the communication
+    svr_socket = socket(AF_INET, SOCK_STREAM, 0);
+    //structure for defining the connection attributes
+    struct sockaddr_in server;
+    //assigning type, port and address 
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+    server.sin_addr.s_addr = inet_addr(ip.c_str());
+    int addrlen = sizeof(sockaddr);
+    //binding the address
+    bind(svr_socket, (struct sockaddr*) &server, sizeof(server));
+    //listening to respond
+    listen(svr_socket,trd);
+    int temp,i=0,sts;
+    string filename;
+    while(1){
+        //accepting request from clients
+        cout<<"server is listening"<<endl;
+        int client_socket = accept(svr_socket, (struct sockaddr *)&server, (socklen_t*)&addrlen);
+        //sts = pthread_create(&thread[i], NULL, fileSend, &client_socket);
+        i++;
     }
-    cout<<"file is closed"<<endl;
-    fclose(fp);
-	close(client_socket);
-	pthread_exit(NULL);
+    //closing the socket
+    close(svr_socket);
+    pthread_exit(NULL);
 
 }
 
-/*string getIp(string filepath){
+
+int main(int argc, char *argv[]){
 	
-	FILE *fp = fopen(filename.c_str(), "rb");
-    char Buffer[BUFF_SIZE];
-    
-}*/
-
-//int socket(int domain, int type, int protocol);
-int main(){
-
-	int svr_socket;
-	pthread_t thread[10]; 
-	char response[1024] = "this is the response from the server";
-	//creating socket for the communication
-	svr_socket = socket(AF_INET, SOCK_STREAM, 0);
-	//structure for defining the connection attributes
-	struct sockaddr_in server;
-	//assigning type, port and address 
-	server.sin_family = AF_INET;
-	server.sin_port = htons(port);
-	server.sin_addr.s_addr = inet_addr("127.0.0.1");
-	int addrlen = sizeof(sockaddr);
-	//binding the address
-	bind(svr_socket, (struct sockaddr*) &server, sizeof(server));
-	//listening to respond
-	listen(svr_socket,10);
-	int temp,i=0,sts;
-	string filename;
-	while(1){
-		//accepting request from clients
-		cout<<"communication started"<<endl;
-		int client_socket = accept(svr_socket, (struct sockaddr *)&server, (socklen_t*)&addrlen);
-		sts = pthread_create(&thread[i], NULL, fileRead, &client_socket); 
-		i++;
+	if(argc != 3){
+		cout<<"check the arguments"<<endl;
+		exit(0);
 	}
-	//closing the socket
-	close(svr_socket);
+
+	int tracker_no = stoi(argv[2]);
+	string quit;
+	parseFile(argv[1], tracker_no);
+	cout<<"port "<<port<<" ip "<<ip<<endl;
+    pthread_t td1;
+    int status = pthread_create(&td1, NULL, trackerServer,NULL);
+	//pthread_join(td1,NULL);
+	while(1){
+		//cout<<"quit to close the tracker"<<endl;
+		cin>>quit;
+		if(!quit.compare("quit")){
+			cout<<"Bye !"<<endl;
+			break;
+		}
+	}
 	return 0;
 }
