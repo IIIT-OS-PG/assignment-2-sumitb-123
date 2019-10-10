@@ -1,3 +1,4 @@
+#include <bits/stdc++.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -16,6 +17,9 @@ using namespace std;
 int port, port1;
 int fl = 0;
 string ip = "127.0.0.1";
+vector<string> tracker_ip;
+vector<int> tracker_port;
+
 
 void *fileRead(void *sock){
 
@@ -111,6 +115,7 @@ void *peerClient(void *args){
 	server.sin_family = AF_INET;
 	server.sin_port = htons(port1);
 	server.sin_addr.s_addr = inet_addr(ip.c_str());
+
 	//connecting to the server
 	int status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
 	if(status<0){
@@ -135,25 +140,143 @@ void *peerClient(void *args){
 
 }
 
+//connect to Tracker
+/*void connectTracker(){
+
+	int svr_socket;
+    //creating socket for the communication
+    svr_socket = socket(AF_INET, SOCK_STREAM, 0);
+    //structure for defining the connection attributes
+    struct sockaddr_in server;
+    //assigning values to the structure like type, port and address 
+    server.sin_family = AF_INET;
+    server.sin_port = htons(tracker_port[0]);
+    server.sin_addr.s_addr = inet_addr(ip.c_str());
+
+    //connecting to the server
+    int status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
+    if(status<0){
+        cout<<"Error in connection establishment "<<endl;
+    }
+
+}*/
+
+//login into the sharing system
+bool login(string user, string pass){
+	return true;
+}
+
+//creating user
+bool createUser(string user, string pass, int svr_socket, int tracker_desc){
+	int option = 1;
+	char username[nm];
+	char passwd[nm];
+	char buffer[BUFF_SIZE];
+	int status;
+	strcpy(buffer,user.c_str());
+	//cout<<"first"<<endl;
+	send(svr_socket,&option,sizeof(option),0);
+	//cout<<"second"<<endl;
+	send(svr_socket,buffer,BUFF_SIZE,0);
+	//cout<<"third"<<endl;
+	strcpy(buffer,pass.c_str());
+	send(svr_socket,buffer,BUFF_SIZE,0);
+	//cout<<"fourth"<<endl;
+	recv(svr_socket,&status,sizeof(status),0);
+	//cout<<"last"<<endl;
+	if(status)
+    	return true;
+	else return false;
+}
+
 //int socket(int domain, int type, int protocol);
 int main(int argc, char* argv[]){
 	
+	//command line arguments
 	ip = argv[1];
 	port = stoi(argv[2]);
-	port1 = stoi(argv[3]);
-	string conf_file = argv[4];
+	//port1 = stoi(argv[3]);
+	string conf_file = argv[3];
+	
+	//declarations
 	string st;
-	pthread_t td1,td2;
-	char filepath[nm];
-	int status = pthread_create(&td1, NULL, peerServer,NULL);
+    pthread_t td1,td2;
+    char filepath[nm];
+	string tfname,username,passwd;
+	int tport;
+	int option;
+	int userFlag = 0;
+	int loginFlag = 0;
+	bool status;
+	//vector<string> tracker_ip;
+	//vector<int> tracker_port;
+	ifstream file(conf_file);
+	
+
+	for(int i=0;i<2;i++){
+		file >>tfname;
+		tracker_ip.push_back(tfname);
+		file >> tport;
+		tracker_port.push_back(tport);
+	}
+	
+	int statust = pthread_create(&td1, NULL, peerServer,NULL);
+
+	//connecting to the tracker
+	int svr_socket;
+    //creating socket for the communication
+    svr_socket = socket(AF_INET, SOCK_STREAM, 0);
+    //structure for defining the connection attributes
+    struct sockaddr_in server;
+    //assigning values to the structure like type, port and address 
+    server.sin_family = AF_INET;
+    server.sin_port = htons(tracker_port[0]);
+    server.sin_addr.s_addr = inet_addr(ip.c_str());
+    int tracker_status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
+	
 	while(1){
-		cout<<"Enter download "<<endl;
-		cin>>st;
-		if(st.compare("download") == 0){
-			cout<<"Enter filepath "<<endl;
-			cin>>filepath;
-			int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);
-		}		
+		cout<<"1.Create User "<<endl;
+		cout<<"2.Login "<<endl;
+		cin>>option;
+		if(option == 1){
+			cout<<"Enter username"<<endl;
+			cin>>username;
+			cout<<"Enter password"<<endl;
+			cin>>passwd;
+			status = createUser(username, passwd, svr_socket, tracker_status);
+			if(status == true){
+				cout<<"user create successful"<<endl;
+				userFlag = 1;
+			}
+			else{
+				cout<<"user create failed"<<endl;
+            	continue;
+			}
+		}
+		else if(option == 2){
+			cout<<"Enter username"<<endl;
+            cin>>username;
+            cout<<"Enter password"<<endl;
+            cin>>passwd;
+            status = login(username, passwd);
+            if(status == true){
+                cout<<"login successful"<<endl;
+                loginFlag = 1;
+			}
+			else{
+				cout<<"login failed"<<endl;
+                continue;
+			}
+		}
+		if(loginFlag == 1){
+			cout<<"enter download to download"<<endl;
+			cin>>st;
+			if(st.compare("download") == 0){
+				cout<<"Enter filepath "<<endl;
+				cin>>filepath;
+				int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);
+			}		
+		}
 	}
 	return 0;
 

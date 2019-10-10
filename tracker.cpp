@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include <bits/stdc++.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include<unistd.h>
@@ -14,6 +15,10 @@ using namespace std;
 int port = def_port;
 int fl = 0;
 string ip = def_ip;
+
+//map for saving user informations
+map<string, string> users;
+map<string, int> active;
 
 //method to parse the info file and set ip and port 
 void parseFile(char *filename, int tno){
@@ -45,9 +50,63 @@ void parseFile(char *filename, int tno){
 			temp = "";
 		}
 		i++;
-		//cout<<fname[i];
 	}
-	//cout<<" ip "<<ip<<" port "<<port<<endl;
+}
+
+//thread for handling the client request
+void *clientHandler(void *arg){
+	
+	char Buffer[BUFF_SIZE];
+	string us;
+	string pass;
+	int option;
+	int size;
+	int status = 1;
+    int client_socket = *((int *)arg);
+	cout<<"connected to client handler"<<endl;
+	while(1){
+		//cout<<"first "<<endl;
+    	recv(client_socket, &option, sizeof(int), 0);
+		if(option == 1){
+		 	recv(client_socket, Buffer, BUFF_SIZE, 0);
+			us = Buffer;
+		 	recv(client_socket, Buffer, BUFF_SIZE, 0);
+			pass = Buffer;
+			if(users.find(us) == users.end()){
+				users[us] = pass;
+				status = 1;
+	            send(client_socket, &status, sizeof(status),0);
+			}
+			else{
+				status = 0;
+				send(client_socket, &status, sizeof(status),0);
+			}
+		}
+		else if(option == 2){
+            recv(client_socket, Buffer, BUFF_SIZE, 0);
+            us = Buffer;
+            recv(client_socket, Buffer, BUFF_SIZE, 0);
+            pass = Buffer;
+            if(users.find(us) != users.end() && users[us] == pass){
+                status = 1;
+				active[us] = 1;
+                send(client_socket, &status, sizeof(status),0);
+            }
+            else{
+                status = 0;
+                send(client_socket, &status, sizeof(status),0);
+            }
+        }
+		else if( option == 5){
+			recv(client_socket, Buffer, BUFF_SIZE, 0);
+            us = Buffer;
+            active[us] = 0;
+            status = 1;
+            send(client_socket, &status, sizeof(status),0);
+        }
+	}
+    close(client_socket);
+    pthread_exit(NULL);	
 }
 
 void *trackerServer(void *sock){
@@ -74,7 +133,7 @@ void *trackerServer(void *sock){
         //accepting request from clients
         cout<<"server is listening"<<endl;
         int client_socket = accept(svr_socket, (struct sockaddr *)&server, (socklen_t*)&addrlen);
-        //sts = pthread_create(&thread[i], NULL, fileSend, &client_socket);
+        sts = pthread_create(&thread[i], NULL, clientHandler, &client_socket);
         i++;
     }
     //closing the socket
