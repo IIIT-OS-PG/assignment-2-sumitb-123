@@ -140,30 +140,27 @@ void *peerClient(void *args){
 
 }
 
-//connect to Tracker
-/*void connectTracker(){
-
-	int svr_socket;
-    //creating socket for the communication
-    svr_socket = socket(AF_INET, SOCK_STREAM, 0);
-    //structure for defining the connection attributes
-    struct sockaddr_in server;
-    //assigning values to the structure like type, port and address 
-    server.sin_family = AF_INET;
-    server.sin_port = htons(tracker_port[0]);
-    server.sin_addr.s_addr = inet_addr(ip.c_str());
-
-    //connecting to the server
-    int status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
-    if(status<0){
-        cout<<"Error in connection establishment "<<endl;
-    }
-
-}*/
-
 //login into the sharing system
-bool login(string user, string pass){
-	return true;
+bool login(string user, string pass, int svr_socket, int tracker_desc){
+    int option = 2;
+    char username[nm];
+    char passwd[nm];
+    char buffer[BUFF_SIZE];
+    int status;
+    strcpy(buffer,user.c_str());
+    //cout<<"first"<<endl;
+    send(svr_socket,&option,sizeof(option),0);
+    //cout<<"second"<<endl;
+    send(svr_socket,buffer,BUFF_SIZE,0);
+    //cout<<"third"<<endl;
+    strcpy(buffer,pass.c_str());
+    send(svr_socket,buffer,BUFF_SIZE,0);
+    //cout<<"fourth"<<endl;
+    recv(svr_socket,&status,sizeof(status),0);
+    //cout<<"last"<<endl;
+    if(status)
+        return true;
+    else return false;
 }
 
 //creating user
@@ -189,6 +186,22 @@ bool createUser(string user, string pass, int svr_socket, int tracker_desc){
 	else return false;
 }
 
+//logout from the tracker
+bool logout(string user, int svr_socket, int tracker_desc){
+	int option = 5;
+    char buffer[BUFF_SIZE];
+    int status;
+    strcpy(buffer,user.c_str());
+    send(svr_socket,&option,sizeof(option),0);
+    send(svr_socket,buffer,BUFF_SIZE,0);
+    //strcpy(buffer,pass.c_str());
+    //send(svr_socket,buffer,BUFF_SIZE,0);
+    recv(svr_socket,&status,sizeof(status),0);
+    if(status)
+        return true;
+    else return false;
+}
+
 //int socket(int domain, int type, int protocol);
 int main(int argc, char* argv[]){
 	
@@ -208,6 +221,7 @@ int main(int argc, char* argv[]){
 	int userFlag = 0;
 	int loginFlag = 0;
 	bool status;
+	int log_option;
 	//vector<string> tracker_ip;
 	//vector<int> tracker_port;
 	ifstream file(conf_file);
@@ -258,7 +272,7 @@ int main(int argc, char* argv[]){
             cin>>username;
             cout<<"Enter password"<<endl;
             cin>>passwd;
-            status = login(username, passwd);
+            status = login(username, passwd, svr_socket, tracker_status);
             if(status == true){
                 cout<<"login successful"<<endl;
                 loginFlag = 1;
@@ -269,13 +283,32 @@ int main(int argc, char* argv[]){
 			}
 		}
 		if(loginFlag == 1){
-			cout<<"enter download to download"<<endl;
-			cin>>st;
+			while(1){
+			cout<<"3.Upload"<<endl;
+			cout<<"4.Download"<<endl;
+			cout<<"5.Logout"<<endl;
+			/*cout<<""<<endl;
+			cout<<""<<endl;
+			cout<<""<<endl;
+			cout<<""<<endl;
+			cout<<""<<endl;
+			cout<<""<<endl;
+			cout<<""<<endl;*/
+			/*cin>>st;
 			if(st.compare("download") == 0){
 				cout<<"Enter filepath "<<endl;
 				cin>>filepath;
 				int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);
-			}		
+			}*/		
+			cin>>log_option;
+			if(log_option == 5){
+				status = logout(username, svr_socket, tracker_status);
+				if(status == 1){
+					cout<<"logged out successfully"<<endl;
+					break;
+				}
+			}
+			}
 		}
 	}
 	return 0;

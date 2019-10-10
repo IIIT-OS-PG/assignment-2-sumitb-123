@@ -53,6 +53,27 @@ void parseFile(char *filename, int tno){
 	}
 }
 
+//read user password from file
+bool readUser(string user, string pass){
+	string uname, passwd;
+	ifstream file("users");
+	while(!file.eof()){
+		file >> uname;
+		file >> passwd;
+		if(!user.compare(uname) && !pass.compare(passwd)){
+			return true;
+		}
+	}
+	return false;
+}
+
+//write user password into the file
+void writeUser(string user, string pass){
+	ofstream file;
+	file.open("users", ios::app);
+	file << user << " " << pass << endl;
+}
+
 //thread for handling the client request
 void *clientHandler(void *arg){
 	
@@ -72,7 +93,17 @@ void *clientHandler(void *arg){
 			us = Buffer;
 		 	recv(client_socket, Buffer, BUFF_SIZE, 0);
 			pass = Buffer;
-			if(users.find(us) == users.end()){
+			int check = readUser(us,pass);
+			if(!check){
+				writeUser(us,pass);
+				status = 1;
+                send(client_socket, &status, sizeof(status),0);
+			}
+			else{
+				status = 0;
+                send(client_socket, &status, sizeof(status),0);
+			}
+			/*if(users.find(us) == users.end()){
 				users[us] = pass;
 				status = 1;
 	            send(client_socket, &status, sizeof(status),0);
@@ -80,14 +111,16 @@ void *clientHandler(void *arg){
 			else{
 				status = 0;
 				send(client_socket, &status, sizeof(status),0);
-			}
+			}*/
 		}
 		else if(option == 2){
             recv(client_socket, Buffer, BUFF_SIZE, 0);
             us = Buffer;
             recv(client_socket, Buffer, BUFF_SIZE, 0);
             pass = Buffer;
-            if(users.find(us) != users.end() && users[us] == pass){
+			int check = readUser(us,pass);
+		    if(check){
+                //writeUser(us,pass);
                 status = 1;
 				active[us] = 1;
                 send(client_socket, &status, sizeof(status),0);
@@ -96,10 +129,23 @@ void *clientHandler(void *arg){
                 status = 0;
                 send(client_socket, &status, sizeof(status),0);
             }
+
+            /*if(users.find(us) != users.end() && users[us] == pass){
+                status = 1;
+				active[us] = 1;
+                send(client_socket, &status, sizeof(status),0);
+            }
+            else{
+                status = 0;
+                send(client_socket, &status, sizeof(status),0);
+            }*/
         }
 		else if( option == 5){
 			recv(client_socket, Buffer, BUFF_SIZE, 0);
             us = Buffer;
+			//recv(client_socket, Buffer, BUFF_SIZE, 0);
+			//pass = Buffer;
+			//writeUser(us,pass);
             active[us] = 0;
             status = 1;
             send(client_socket, &status, sizeof(status),0);
