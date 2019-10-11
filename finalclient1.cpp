@@ -223,6 +223,63 @@ bool logout(string user, int svr_socket, int tracker_desc){
     else return false;
 }
 
+//create group
+bool createGroup(string user, int group_id, int svr_socket, int tracker_desc){
+    int option = 6;
+    char buffer[BUFF_SIZE];
+    int status;
+    strcpy(buffer,user.c_str());
+    send(svr_socket,&option,sizeof(option),0);
+    send(svr_socket,buffer,BUFF_SIZE,0);
+	cout<<group_id<<endl;
+    send(svr_socket,&group_id,sizeof(group_id),0);
+    recv(svr_socket,&status,sizeof(status),0);
+    if(status)
+        return true;
+    else return false;
+}
+
+//list all groups
+void listAllGroups(int svr_socket, int tracker_desc){
+	int option = 7;
+	char buffer[BUFF_SIZE];
+    int status=1;
+	int group_id;
+	send(svr_socket,&option,sizeof(option),0);
+	while(status){
+		recv(svr_socket,&status,sizeof(status),0);
+		if(status == 0){
+			cout<<"exit "<<endl;
+			break;
+		}
+		recv(svr_socket,&group_id,sizeof(group_id),0);
+		cout<<group_id<<" ";
+		recv(svr_socket,buffer,BUFF_SIZE,0);
+		cout<<buffer<<endl;
+		memset (buffer,'\0',BUFF_SIZE);
+	}
+	memset (buffer,'\0',BUFF_SIZE);
+}
+
+//join group
+void joinGroup(string uname, int gid, int svr_socket, int tracker_desc){
+    int option = 8;
+    char buffer[BUFF_SIZE];
+    bool status;
+	//strcpy(buffer,uname.c_str());
+    send(svr_socket,&option,sizeof(option),0);
+    //send(svr_socket,buffer,BUFF_SIZE,0);
+    send(svr_socket,&gid,sizeof(gid),0);
+	recv(svr_socket,&status,sizeof(status),0);
+	if(status){
+		cout<<"requested for joining"<<endl;
+	}
+	else{
+		cout<<"join request failed"<<endl;
+	}	
+}
+
+
 //int socket(int domain, int type, int protocol);
 int main(int argc, char* argv[]){
 	
@@ -308,9 +365,10 @@ int main(int argc, char* argv[]){
 			cout<<"3.Upload"<<endl;
 			cout<<"4.Download"<<endl;
 			cout<<"5.Logout"<<endl;
+			cout<<"6.Create Group"<<endl;
+			cout<<"7.List Groups"<<endl;
+			cout<<"8.Join Group"<<endl;
 			/*cout<<""<<endl;
-			cout<<""<<endl;
-			cout<<""<<endl;
 			cout<<""<<endl;
 			cout<<""<<endl;
 			cout<<""<<endl;
@@ -328,6 +386,25 @@ int main(int argc, char* argv[]){
 					cout<<"logged out successfully"<<endl;
 					break;
 				}
+			}
+			else if(log_option == 6){
+                int group_id;
+                cin>>group_id;
+                status = createGroup(username, group_id, svr_socket, tracker_status);
+                if(status){
+                    cout<<"group created"<<endl;
+                }
+                else{
+                    cout<<"error in group creation"<<endl;
+                }
+            }
+			else if(log_option == 7){
+				listAllGroups(svr_socket, tracker_status);
+			}
+			else if(log_option == 8){
+				int group_id;
+				cin>>group_id;
+				joinGroup(username, group_id, svr_socket, tracker_status);
 			}
 			}
 		}

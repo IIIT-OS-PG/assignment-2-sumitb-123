@@ -19,6 +19,8 @@ string ip = def_ip;
 //map for saving user informations
 map<string, string> users;
 map<string, int> active;
+map<int, vector<string>> requests;
+map<int, string> groups;
 
 //method to parse the info file and set ip and port 
 void parseFile(char *filename, int tno){
@@ -54,24 +56,102 @@ void parseFile(char *filename, int tno){
 }
 
 //read user password from file
+bool readUserU(string user, string pass){
+    string uname, passwd;
+	if(users.find(user) != users.end())
+		return true;
+	else return false;
+    /*ifstream file("users");
+    while(!file.eof()){
+        file >> uname;
+        file >> passwd;
+        if(!user.compare(uname)){
+            return true;
+        }
+    }*/
+    return false;
+}
+
+//read user password from file
 bool readUser(string user, string pass){
-	string uname, passwd;
-	ifstream file("users");
+	//string uname, passwd;
+	cout<<user<<" "<<pass<<endl;
+	cout<<users[user] <<endl;
+	if(users.find(user) != users.end() && users[user] == pass)
+		return true;
+	else return false;
+	/*ifstream file("users");
 	while(!file.eof()){
 		file >> uname;
 		file >> passwd;
 		if(!user.compare(uname) && !pass.compare(passwd)){
+
 			return true;
 		}
 	}
-	return false;
+	return false;*/
 }
 
 //write user password into the file
 void writeUser(string user, string pass){
 	ofstream file;
-	file.open("users", ios::app);
-	file << user << " " << pass << endl;
+	file.open("users");
+	users[user] = pass;
+	for(auto u: users){
+		file << u.first << " " << u.second << endl;
+	}
+}
+
+//maintaining the active status
+void writeActive(string us){
+	ofstream file("active");
+	for(auto it: active){
+		file << it.first <<" "<<it.second<<endl;
+	}
+}
+
+//create group
+int createGroup(string user, int group_id){
+	ifstream file("groups");
+	int grp_id;
+	string uname;
+    /*while(!file.eof()){
+        file >> grp_id;
+        file >> uname;
+        if(grp_id == group_id){
+            return 0;
+        }
+    }*/
+	if(groups.find(group_id) == groups.end()){
+		groups[group_id] = user;
+		ofstream ofile("groups");
+		for(auto g: groups){
+			ofile <<g.first<<" "<<g.second<<endl;
+		}
+		return 1;
+	}
+	else return 0;
+	
+}
+
+//request for joining group
+bool joinGroupRequest(string us, int gid){
+	if(groups.find(gid) != groups.end()){	
+		requests[gid].push_back(us);
+		ofstream file("requests");
+		for(auto it: requests){
+			file << it.first;
+			for(auto e: it.second){
+				file <<" "<<e;
+			}
+			file<<endl;
+		}
+		return true;
+	}
+	else{
+		return false;
+	}
+	
 }
 
 //thread for handling the client request
@@ -93,7 +173,7 @@ void *clientHandler(void *arg){
 			us = Buffer;
 		 	recv(client_socket, Buffer, BUFF_SIZE, 0);
 			pass = Buffer;
-			int check = readUser(us,pass);
+			int check = readUserU(us,pass);
 			if(!check){
 				writeUser(us,pass);
 				status = 1;
@@ -118,11 +198,12 @@ void *clientHandler(void *arg){
             us = Buffer;
             recv(client_socket, Buffer, BUFF_SIZE, 0);
             pass = Buffer;
-			int check = readUser(us,pass);
+			bool check = readUser(us,pass);
 		    if(check){
                 //writeUser(us,pass);
                 status = 1;
 				active[us] = 1;
+				writeActive(us);
                 send(client_socket, &status, sizeof(status),0);
             }
             else{
@@ -147,16 +228,54 @@ void *clientHandler(void *arg){
 			//pass = Buffer;
 			//writeUser(us,pass);
             active[us] = 0;
+			writeActive(us);
             status = 1;
             send(client_socket, &status, sizeof(status),0);
         }
+		else if(option == 6){
+			int grp;
+			recv(client_socket, Buffer, BUFF_SIZE, 0);
+            us = Buffer;
+			recv(client_socket, &grp, sizeof(grp), 0);
+			//cout<<"group"<<grp<<endl;
+			status = createGroup(us, grp);
+			send(client_socket, &status, sizeof(status),0);
+		}
+		else if(option == 7){
+			int more_grp = 1;
+			ifstream file("groups");
+    		int grp_id;
+    		string uname;
+			char user[50];
+    		while(!file.eof()){
+        		file >> grp_id;
+       		 	file >> uname;
+				cout<<"grp "<<grp_id<<" un "<<uname<<endl;
+				//if(file.tellg() == -1) break;
+				strcpy(user, uname.c_str());
+				send(client_socket, &more_grp, sizeof(more_grp),0);
+				send(client_socket, &grp_id, sizeof(grp_id),0);
+				send(client_socket, user, sizeof(user),0);
+    		}
+			file.close();
+			more_grp = 0;
+			cout<<"exited "<<endl;
+			send(client_socket, &more_grp, sizeof(more_grp),0);
+			
+		}
+		else if(option == 8){
+			int gid;
+			bool st;
+			recv(client_socket, &gid, sizeof(gid), 0);			
+			st = joinGroupRequest(us,gid);
+			send(client_socket, &st, sizeof(st),0);
+		}
 	}
     close(client_socket);
     pthread_exit(NULL);	
 }
 
 void *trackerServer(void *sock){
-
     int svr_socket;
     pthread_t thread[trd];
     char response[BUFF_SIZE];
