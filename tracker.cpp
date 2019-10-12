@@ -16,11 +16,41 @@ int port = def_port;
 int fl = 0;
 string ip = def_ip;
 
-//map for saving user informations
+//map for saving user & password
 map<string, string> users;
+//user and active or not
 map<string, int> active;
+//group id and users list who has requested for joining the group
 map<int, vector<string>> requests;
+//group id and owner
 map<int, string> groups;
+//members of the group
+map<int,vector<string>> members;
+
+
+//load data structures with data from files
+/*void loadFiles(){
+	int gid;
+	string un;
+	ifstream file("groups");
+	while(!file.eof()){
+		if(file.tellg() != -1)
+			break;
+		file >> gid;
+		file >> un;
+		groups[gid] = un;
+	}
+	file.close();
+	ifstream file("requests");
+    while(!file.eof()){
+        if(file.tellg() != -1)
+            break;
+        file >> gid;
+        file >> un;
+        groups[gid] = un;
+    }
+    file.close();
+}*/
 
 //method to parse the info file and set ip and port 
 void parseFile(char *filename, int tno){
@@ -71,6 +101,33 @@ bool readUserU(string user, string pass){
     }*/
     return false;
 }
+
+//update the request file
+void updateRequests(){
+	ofstream file("requests");
+    for(auto it: requests){
+       file << it.first;
+       for(auto e: it.second){
+	       file <<" "<<e;
+       }
+       file<<endl;
+    }
+	file.close();
+}
+
+//update the members
+void updateMembers(){
+    ofstream file("members");
+    for(auto it: members){
+       file << it.first;
+       for(auto e: it.second){
+           file <<" "<<e;
+       }
+       file<<endl;
+    }
+    file.close();
+}
+
 
 //read user password from file
 bool readUser(string user, string pass){
@@ -152,6 +209,25 @@ bool joinGroupRequest(string us, int gid){
 		return false;
 	}
 	
+}
+
+//accept requests
+bool acceptRequests(int gid, string uname){
+	if(requests.find(gid) != requests.end()){
+		vector<string> :: iterator it;
+		it = find(requests[gid].begin(),requests[gid].end(),uname);
+		if(it != requests[gid].end()){
+			requests[gid].erase(it);
+			if(requests[gid].size() == 0)
+				requests.erase(gid);
+		}
+		//updating the requests file
+		updateRequests();
+		members[gid].push_back(uname);
+		updateMembers();
+		return true;
+	}
+	else return false;
 }
 
 //thread for handling the client request
@@ -243,11 +319,22 @@ void *clientHandler(void *arg){
 		}
 		else if(option == 7){
 			int more_grp = 1;
-			ifstream file("groups");
+			//ifstream file("groups");
     		int grp_id;
     		string uname;
 			char user[50];
-    		while(!file.eof()){
+			int gsize = 0;
+			if(groups.size()>0){
+				gsize = groups.size();
+			}
+			send(client_socket, &gsize, sizeof(gsize),0);
+			for(auto u : groups){
+				grp_id=u.first;
+				strcpy(user, u.second.c_str());
+                send(client_socket, &grp_id, sizeof(grp_id),0);
+                send(client_socket, user, sizeof(user),0);
+			}
+    		/*while(!file.eof()){
         		file >> grp_id;
        		 	file >> uname;
 				cout<<"grp "<<grp_id<<" un "<<uname<<endl;
@@ -257,10 +344,7 @@ void *clientHandler(void *arg){
 				send(client_socket, &grp_id, sizeof(grp_id),0);
 				send(client_socket, user, sizeof(user),0);
     		}
-			file.close();
-			more_grp = 0;
-			cout<<"exited "<<endl;
-			send(client_socket, &more_grp, sizeof(more_grp),0);
+			file.close();*/
 			
 		}
 		else if(option == 8){
@@ -269,6 +353,36 @@ void *clientHandler(void *arg){
 			recv(client_socket, &gid, sizeof(gid), 0);			
 			st = joinGroupRequest(us,gid);
 			send(client_socket, &st, sizeof(st),0);
+		}
+		else if(option == 9){
+			int gid;
+			int pdr = 0;
+            recv(client_socket, &gid, sizeof(gid), 0);
+			if(requests.find(gid) != requests.end()){
+            	pdr = requests[gid].size();
+				send(client_socket, &pdr, sizeof(pdr),0);
+				int ru = 0;
+				char rur[50];
+				while(pdr){
+					strcpy(rur,requests[gid][ru].c_str());
+					send(client_socket,rur,sizeof(rur),0);
+					pdr--;
+				}
+			}
+			else{
+				send(client_socket, &pdr, sizeof(pdr),0);
+			}
+		}
+		else if(option == 10){
+			int gid;
+			string uname;
+			char buffer[BUFF_SIZE];
+			bool sts;
+			recv(client_socket, &gid, sizeof(gid), 0);
+			recv(client_socket, buffer, BUFF_SIZE, 0);
+			uname = buffer;
+			sts = acceptRequests(gid,uname);
+			send(client_socket, &sts, sizeof(sts),0);
 		}
 	}
     close(client_socket);

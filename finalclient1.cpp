@@ -22,7 +22,6 @@ vector<int> tracker_port;
 
 
 void *fileRead(void *sock){
-
 	cout<<"inside the thread"<<endl;
 	int client_socket = *((int *)sock);
 	string filename = "rfile"+to_string(++fl);
@@ -43,7 +42,6 @@ void *fileRead(void *sock){
 }
 
 void *fileSend(void *sock){
-	
 	char Buffer[BUFF_SIZE];
     int file_size,n,size;
 	cout<<"inside sending thread"<<endl;
@@ -70,7 +68,6 @@ void *fileSend(void *sock){
 }
 
 void *peerServer(void *sock){
-
 	int svr_socket;
     pthread_t thread[trd];
     char response[BUFF_SIZE];
@@ -245,20 +242,17 @@ void listAllGroups(int svr_socket, int tracker_desc){
 	char buffer[BUFF_SIZE];
     int status=1;
 	int group_id;
+	int gsize =0;
 	send(svr_socket,&option,sizeof(option),0);
-	while(status){
-		recv(svr_socket,&status,sizeof(status),0);
-		if(status == 0){
-			cout<<"exit "<<endl;
-			break;
-		}
+	recv(svr_socket,&gsize,sizeof(gsize),0);
+	while(gsize){
 		recv(svr_socket,&group_id,sizeof(group_id),0);
 		cout<<group_id<<" ";
 		recv(svr_socket,buffer,BUFF_SIZE,0);
 		cout<<buffer<<endl;
+		gsize--;
 		memset (buffer,'\0',BUFF_SIZE);
 	}
-	memset (buffer,'\0',BUFF_SIZE);
 }
 
 //join group
@@ -277,6 +271,45 @@ void joinGroup(string uname, int gid, int svr_socket, int tracker_desc){
 	else{
 		cout<<"join request failed"<<endl;
 	}	
+}
+
+//listing all the pending request for a group
+void listRequests(int gid, int svr_socket, int tracker_desc){
+	int option = 9;
+    char buffer[BUFF_SIZE];
+    bool status;
+	int preq;
+    //strcpy(buffer,uname.c_str());
+    send(svr_socket,&option,sizeof(option),0);
+    //send(svr_socket,buffer,BUFF_SIZE,0);
+    send(svr_socket,&gid,sizeof(gid),0);
+    recv(svr_socket,&preq,sizeof(preq),0);
+	if(!preq){
+		cout<<"N0 pending requests"<<endl;
+		return;
+	}
+	while(preq){
+		recv(svr_socket,buffer,BUFF_SIZE,0);
+		cout<<"requested "<<buffer<<endl;
+		preq--;
+	}
+}
+//Accept request
+void acceptRequests(int gid, string un, int svr_socket, int tracker_desc){
+	int option = 10;
+    char buffer[BUFF_SIZE];
+    bool status=true;
+    strcpy(buffer,un.c_str());
+    send(svr_socket,&option,sizeof(option),0);
+    send(svr_socket,&gid,sizeof(gid),0);
+    send(svr_socket,buffer,BUFF_SIZE,0);
+	recv(svr_socket,&status,sizeof(status),0);
+	if(status){
+		cout<<"request accepted"<<endl;
+	}
+	else{
+		cout<<"not able to process the request"<<endl;
+	}
 }
 
 
@@ -368,9 +401,9 @@ int main(int argc, char* argv[]){
 			cout<<"6.Create Group"<<endl;
 			cout<<"7.List Groups"<<endl;
 			cout<<"8.Join Group"<<endl;
+			cout<<"9.List request"<<endl;
+			cout<<"10.Accept Request"<<endl;
 			/*cout<<""<<endl;
-			cout<<""<<endl;
-			cout<<""<<endl;
 			cout<<""<<endl;
 			cout<<""<<endl;*/
 			/*cin>>st;
@@ -406,6 +439,17 @@ int main(int argc, char* argv[]){
 				cin>>group_id;
 				joinGroup(username, group_id, svr_socket, tracker_status);
 			}
+			else if(log_option == 9){
+				int group_id;
+				cin>>group_id;
+				listRequests(group_id, svr_socket, tracker_status);
+			}
+			else if(log_option == 10){
+                int group_id;
+				string un;
+                cin>>group_id>>un;
+                acceptRequests(group_id, un, svr_socket, tracker_status);
+            }
 			}
 		}
 	}
