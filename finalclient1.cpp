@@ -342,6 +342,37 @@ void leaveGroup(int gid, string un, int svr_socket, int tracker_desc){
     }	
 }
 
+//download file from peer
+bool downloadFile(string un, string fname, int svr_socket, int tracker_desc){
+	pthread_t td1;
+	int option = 4;
+	char buffer[BUFF_SIZE];
+	//char fname[BUFF_SIZE];
+	char filepath[BUFF_SIZE];
+	//strcpy(fname,fpath);
+	string peerip;
+	int peerport;
+	//sending the option 
+	send(svr_socket,&option,sizeof(option),0);
+	//sending the user name of the requesting client
+	strcpy(buffer,un.c_str());
+    send(svr_socket,buffer,BUFF_SIZE,0);
+	//sending the filename to be downloaded
+	strcpy(buffer,fname.c_str());
+    send(svr_socket,buffer,BUFF_SIZE,0);
+	//receiving the filepath
+	recv(svr_socket,buffer,BUFF_SIZE,0);
+	strcpy(filepath,buffer);
+	//receiving the peer ip
+	recv(svr_socket,buffer,BUFF_SIZE,0);
+	peerip = buffer;
+	//receiving the peer port
+	recv(svr_socket,&peerport,sizeof(peerport),0);
+	cout<<"file path "<<filepath<<" peer ip "<<peerip<<" peer port "<<peerport<<endl;
+	//int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);	
+	
+}
+
 //int socket(int domain, int type, int protocol);
 int main(int argc, char* argv[]){
 	
@@ -436,13 +467,19 @@ int main(int argc, char* argv[]){
 			/*cout<<""<<endl;
 			cout<<""<<endl;*/
 			/*cin>>st;
-			if(st.compare("download") == 0){
+			if(){
 				cout<<"Enter filepath "<<endl;
 				cin>>filepath;
 				int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);
 			}*/		
 			cin>>log_option;
-			if(log_option == 5){
+			if(log_option == 4){
+				string dfpath;
+				cin>>dfpath;
+				downloadFile(username, dfpath, svr_socket, tracker_status);
+				//int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);
+            }
+			else if(log_option == 5){
 				status = logout(username, svr_socket, tracker_status);
 				if(status == 1){
 					cout<<"logged out successfully"<<endl;
