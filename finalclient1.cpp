@@ -20,6 +20,12 @@ string ip = "127.0.0.1";
 vector<string> tracker_ip;
 vector<int> tracker_port;
 
+struct dstruct{
+	string pip;
+	string filepath;
+	string dpath;
+	int  port;
+};
 
 void *fileRead(void *sock){
 	cout<<"inside the thread"<<endl;
@@ -101,7 +107,10 @@ void *peerServer(void *sock){
 
 void *peerClient(void *args){
 
-	char *filepath = ((char *)args);
+	//char *filepath = ((char *)args);
+	char filepath[BUFF_SIZE];
+	struct dstruct *peerinfo = ((struct dstruct *)args);
+	strcpy(filepath,(peerinfo->filepath).c_str());
 	cout<<filepath<<endl;
 	int svr_socket;
 	//creating socket for the communication
@@ -110,8 +119,8 @@ void *peerClient(void *args){
 	struct sockaddr_in server;
 	//assigning values to the structure like type, port and address 
 	server.sin_family = AF_INET;
-	server.sin_port = htons(port1);
-	server.sin_addr.s_addr = inet_addr(ip.c_str());
+	server.sin_port = htons(peerinfo->port);
+	server.sin_addr.s_addr = inet_addr(peerinfo->pip.c_str());
 
 	//connecting to the server
 	int status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
@@ -120,7 +129,7 @@ void *peerClient(void *args){
 	}
 	char response[BUFF_SIZE];
 	cout<<"starting communication from client thread"<<endl;
-    FILE *fp1 = fopen("received","wb");
+    FILE *fp1 = fopen(peerinfo->dpath.c_str(),"wb");
     send (svr_socket,filepath,sizeof(filepath), 0);
 
     char Buffer[BUFF_SIZE] ;
@@ -343,7 +352,7 @@ void leaveGroup(int gid, string un, int svr_socket, int tracker_desc){
 }
 
 //download file from peer
-bool downloadFile(string un, string fname, int svr_socket, int tracker_desc){
+bool downloadFile(string un, string fname, string dstpath, int svr_socket, int tracker_desc){
 	pthread_t td1;
 	int option = 4;
 	char buffer[BUFF_SIZE];
@@ -369,7 +378,19 @@ bool downloadFile(string un, string fname, int svr_socket, int tracker_desc){
 	//receiving the peer port
 	recv(svr_socket,&peerport,sizeof(peerport),0);
 	cout<<"file path "<<filepath<<" peer ip "<<peerip<<" peer port "<<peerport<<endl;
-	//int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);	
+	//struct dstruct{
+    /*char *pip;
+    char *filepath;
+    char *dpath;
+    int  port;
+	};*/
+
+	struct dstruct *temp = (struct dstruct*)malloc(sizeof(dstruct));
+	temp->pip = peerip;
+	temp->filepath = filepath;
+	temp->dpath = dstpath;
+	temp->port = peerport;
+	int cstatus = pthread_create(&td1, NULL, peerClient,(void*)temp);	
 	
 }
 
@@ -474,9 +495,9 @@ int main(int argc, char* argv[]){
 			}*/		
 			cin>>log_option;
 			if(log_option == 4){
-				string dfpath;
-				cin>>dfpath;
-				downloadFile(username, dfpath, svr_socket, tracker_status);
+				string dfpath,dstpath;
+				cin>>dfpath>>dstpath;
+				downloadFile(username, dfpath, dstpath, svr_socket, tracker_status);
 				//int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);
             }
 			else if(log_option == 5){

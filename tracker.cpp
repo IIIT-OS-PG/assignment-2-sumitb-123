@@ -16,6 +16,8 @@ int port = def_port;
 int fl = 0;
 string ip = def_ip;
 
+//map for saving in which groups user is
+map<string, vector<int>> usergroup;
 //map for saving user & password
 map<string, string> users;
 //user and active or not
@@ -129,6 +131,19 @@ void updateMembers(){
     file.close();
 }
 
+//writing to the usergroup file
+void updateUsergroupFile(){
+	ofstream file("usergroup");
+    for(auto it: usergroup){
+       file << it.first;
+       for(auto e: it.second){
+           file <<" "<<e;
+       }
+       file<<endl;
+    }
+    file.close();
+}
+
 
 //read user password from file
 bool readUser(string user, string pass){
@@ -212,6 +227,37 @@ bool joinGroupRequest(string us, int gid){
 	
 }
 
+//update the group usr belongs
+void updateUserGroup(int gid, string us){
+	if(usergroup.find(us) != usergroup.end()){
+		vector<int> :: iterator it;
+		it = find(usergroup[us].begin(),usergroup[us].end(),gid);
+		if(it == usergroup[us].end()){
+			usergroup[us].push_back(gid);
+		}
+	}
+	else{
+		usergroup[us].push_back(gid);
+	}
+	updateUsergroupFile();
+
+}
+
+//remove the gid from user list
+void removeUserGroup(int gid, string us){
+	if(usergroup.find(us) != usergroup.end()){
+		vector<int> :: iterator it;
+        it = find(usergroup[us].begin(),usergroup[us].end(),gid);
+        if(it != usergroup[us].end()){
+            usergroup[us].erase(it);
+            if(usergroup[us].size() == 0)
+                usergroup.erase(us);
+        }
+		updateUsergroupFile();
+	}
+}
+
+
 //accept requests
 bool acceptRequests(int gid, string uname, string us){
 	if(requests.find(gid) != requests.end() && groups[gid] == us){
@@ -226,6 +272,7 @@ bool acceptRequests(int gid, string uname, string us){
 		updateRequests();
 		members[gid].push_back(uname);
 		updateMembers();
+		updateUserGroup(gid, uname);
 		return true;
 	}
 	else return false;
@@ -243,6 +290,7 @@ bool leaveGroup(int gid, string uname){
         }
         //updating the requests file
         updateMembers();
+		removeUserGroup(gid,uname);
 		return true;
 	}
 	else return false;
@@ -272,6 +320,20 @@ void removeIpPort(string us){
         file <<e.first <<" "<<e.second.first<<" "<<e.second.second<<endl;
     }
     file.close();
+}
+
+//download information send to peer
+void downloadFile(int client_socket, string us, string fname){
+	int peerport=11123;
+	string peerip = "127.0.0.1";
+	string filepath = "test";
+	char buffer[BUFF_SIZE];
+	strcpy(buffer,filepath.c_str());
+	send(client_socket, buffer, BUFF_SIZE,0);
+	strcpy(buffer,peerip.c_str());
+	send(client_socket, buffer,BUFF_SIZE,0);
+	send(client_socket, &peerport, sizeof(peerport),0);
+
 }
 
 //thread for handling the client request
@@ -350,6 +412,14 @@ void *clientHandler(void *arg){
                 send(client_socket, &status, sizeof(status),0);
             }*/
         }
+		else if( option == 4){
+			string reqfile;
+			recv(client_socket, Buffer, BUFF_SIZE, 0);
+			us = Buffer;
+			recv(client_socket, Buffer, BUFF_SIZE, 0);
+			reqfile = Buffer;
+			downloadFile(client_socket,us,reqfile);	
+		}
 		else if( option == 5){
 			recv(client_socket, Buffer, BUFF_SIZE, 0);
             us = Buffer;
@@ -376,7 +446,7 @@ void *clientHandler(void *arg){
 			//ifstream file("groups");
     		int grp_id;
     		string uname;
-			char user[50];
+			char user[BUFF_SIZE];
 			int gsize = 0;
 			if(groups.size()>0){
 				gsize = groups.size();
@@ -386,7 +456,7 @@ void *clientHandler(void *arg){
 				grp_id=u.first;
 				strcpy(user, u.second.c_str());
                 send(client_socket, &grp_id, sizeof(grp_id),0);
-                send(client_socket, user, sizeof(user),0);
+                send(client_socket, user, BUFF_SIZE,0);
 			}
     		/*while(!file.eof()){
         		file >> grp_id;
