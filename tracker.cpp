@@ -212,8 +212,8 @@ bool joinGroupRequest(string us, int gid){
 }
 
 //accept requests
-bool acceptRequests(int gid, string uname){
-	if(requests.find(gid) != requests.end()){
+bool acceptRequests(int gid, string uname, string us){
+	if(requests.find(gid) != requests.end() && groups[gid] == us){
 		vector<string> :: iterator it;
 		it = find(requests[gid].begin(),requests[gid].end(),uname);
 		if(it != requests[gid].end()){
@@ -225,6 +225,23 @@ bool acceptRequests(int gid, string uname){
 		updateRequests();
 		members[gid].push_back(uname);
 		updateMembers();
+		return true;
+	}
+	else return false;
+}
+
+//leave group
+bool leaveGroup(int gid, string uname){
+	if(members.find(gid) != members.end()){
+		vector<string> :: iterator it;
+        it = find(members[gid].begin(),members[gid].end(),uname);
+        if(it != members[gid].end()){
+            members[gid].erase(it);
+            if(members[gid].size() == 0)
+                members.erase(gid);
+        }
+        //updating the requests file
+        updateMembers();
 		return true;
 	}
 	else return false;
@@ -376,14 +393,28 @@ void *clientHandler(void *arg){
 		else if(option == 10){
 			int gid;
 			string uname;
+			string username;
 			char buffer[BUFF_SIZE];
 			bool sts;
 			recv(client_socket, &gid, sizeof(gid), 0);
 			recv(client_socket, buffer, BUFF_SIZE, 0);
 			uname = buffer;
-			sts = acceptRequests(gid,uname);
+			recv(client_socket, buffer, BUFF_SIZE, 0);
+			username = buffer;
+			sts = acceptRequests(gid,uname,username);
 			send(client_socket, &sts, sizeof(sts),0);
 		}
+		else if(option == 11){
+            int gid;
+            string uname;
+            char buffer[BUFF_SIZE];
+            bool sts;
+            recv(client_socket, &gid, sizeof(gid), 0);
+            recv(client_socket, buffer, BUFF_SIZE, 0);
+            uname = buffer;
+            sts = leaveGroup(gid,uname);
+            send(client_socket, &sts, sizeof(sts),0);
+        }
 	}
     close(client_socket);
     pthread_exit(NULL);	
