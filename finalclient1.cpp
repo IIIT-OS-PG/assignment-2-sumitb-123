@@ -165,6 +165,9 @@ bool login(string user, string pass, int svr_socket, int tracker_desc){
     char passwd[nm];
     char buffer[BUFF_SIZE];
     int status;
+	bool ipst;
+	int uport = port;
+	string uip = ip;
     strcpy(buffer,user.c_str());
     //cout<<"first"<<endl;
     send(svr_socket,&option,sizeof(option),0);
@@ -176,8 +179,15 @@ bool login(string user, string pass, int svr_socket, int tracker_desc){
     //cout<<"fourth"<<endl;
     recv(svr_socket,&status,sizeof(status),0);
     //cout<<"last"<<endl;
-    if(status)
-        return true;
+    if(status){
+		strcpy(buffer,uip.c_str());
+	    send(svr_socket,buffer,BUFF_SIZE,0);
+	    send(svr_socket,&uport,sizeof(uport),0);
+		recv(svr_socket,&ipst,sizeof(ipst),0);
+		if(ipst)
+			return true;
+		else return false;
+	}
     else return false;
 }
 

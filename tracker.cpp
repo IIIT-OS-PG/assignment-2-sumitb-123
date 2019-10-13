@@ -26,7 +26,8 @@ map<int, vector<string>> requests;
 map<int, string> groups;
 //members of the group
 map<int,vector<string>> members;
-
+//logged in peers ip and port 
+map<string, pair<string, int>> peerinfo;
 
 //load data structures with data from files
 /*void loadFiles(){
@@ -247,6 +248,32 @@ bool leaveGroup(int gid, string uname){
 	else return false;
 }
 
+//save users ip port
+bool saveIpPort(string us, string uip, int port){
+	pair<string, int> temp;
+	temp.first = uip;
+	temp.second = port;
+	peerinfo[us] = temp;
+	ofstream file("peerinfo");
+	for(auto e: peerinfo){
+		file <<e.first <<" "<<e.second.first<<" "<<e.second.second<<endl;
+	}
+	file.close();
+	return true;
+}
+
+//remove user ip and port
+void removeIpPort(string us){
+	if(peerinfo.find(us) != peerinfo.end()){
+		peerinfo.erase(us);
+	}
+	ofstream file("peerinfo");
+    for(auto e: peerinfo){
+        file <<e.first <<" "<<e.second.first<<" "<<e.second.second<<endl;
+    }
+    file.close();
+}
+
 //thread for handling the client request
 void *clientHandler(void *arg){
 	
@@ -292,12 +319,21 @@ void *clientHandler(void *arg){
             recv(client_socket, Buffer, BUFF_SIZE, 0);
             pass = Buffer;
 			bool check = readUser(us,pass);
+			string uip;
+			int uport;
+			bool ss;
 		    if(check){
                 //writeUser(us,pass);
                 status = 1;
 				active[us] = 1;
 				writeActive(us);
                 send(client_socket, &status, sizeof(status),0);
+				recv(client_socket, Buffer, BUFF_SIZE, 0);
+				uip = Buffer;
+				recv(client_socket, &uport, sizeof(uport), 0);
+				ss = saveIpPort(us,uip,port);
+				send(client_socket, &ss, sizeof(ss),0);
+				
             }
             else{
                 status = 0;
@@ -322,6 +358,7 @@ void *clientHandler(void *arg){
 			//writeUser(us,pass);
             active[us] = 0;
 			writeActive(us);
+			removeIpPort(us);
             status = 1;
             send(client_socket, &status, sizeof(status),0);
         }
