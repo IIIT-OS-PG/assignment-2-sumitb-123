@@ -176,6 +176,7 @@ bool login(string user, string pass, int svr_socket, int tracker_desc){
     int status;
 	bool ipst;
 	int uport = port;
+	cout<<"server port for client "<<uport<<endl;
 	string uip = ip;
     strcpy(buffer,user.c_str());
     //cout<<"first"<<endl;
@@ -352,31 +353,45 @@ void leaveGroup(int gid, string un, int svr_socket, int tracker_desc){
 }
 
 //download file from peer
-bool downloadFile(string un, string fname, string dstpath, int svr_socket, int tracker_desc){
+bool downloadFile(int g_id,string un, string fname, string dstpath, int svr_socket, int tracker_desc){
 	pthread_t td1;
 	int option = 4;
 	char buffer[BUFF_SIZE];
 	//char fname[BUFF_SIZE];
 	char filepath[BUFF_SIZE];
+	int nops;
 	//strcpy(fname,fpath);
 	string peerip;
 	int peerport;
 	//sending the option 
 	send(svr_socket,&option,sizeof(option),0);
 	//sending the user name of the requesting client
+	send(svr_socket,&g_id,sizeof(g_id),0);
 	strcpy(buffer,un.c_str());
     send(svr_socket,buffer,BUFF_SIZE,0);
 	//sending the filename to be downloaded
 	strcpy(buffer,fname.c_str());
     send(svr_socket,buffer,BUFF_SIZE,0);
+	//receiving the no of peers
+	recv(svr_socket,&nops,sizeof(nops),0);
+	while(nops){
+		recv(svr_socket,buffer,BUFF_SIZE,0);
+    	strcpy(filepath,buffer);
+    	//receiving the peer ip
+    	recv(svr_socket,buffer,BUFF_SIZE,0);
+    	peerip = buffer;
+    	//receiving the peer port
+	    recv(svr_socket,&peerport,sizeof(peerport),0);
+		nops--;
+	}
 	//receiving the filepath
-	recv(svr_socket,buffer,BUFF_SIZE,0);
-	strcpy(filepath,buffer);
+	//recv(svr_socket,buffer,BUFF_SIZE,0);
+	//strcpy(filepath,buffer);
 	//receiving the peer ip
-	recv(svr_socket,buffer,BUFF_SIZE,0);
-	peerip = buffer;
+	//recv(svr_socket,buffer,BUFF_SIZE,0);
+	//peerip = buffer;
 	//receiving the peer port
-	recv(svr_socket,&peerport,sizeof(peerport),0);
+	//recv(svr_socket,&peerport,sizeof(peerport),0);
 	cout<<"file path "<<filepath<<" peer ip "<<peerip<<" peer port "<<peerport<<endl;
 	//struct dstruct{
     /*char *pip;
@@ -400,6 +415,7 @@ int main(int argc, char* argv[]){
 	//command line arguments
 	ip = argv[1];
 	port = stoi(argv[2]);
+	//cout<<"port "<<port<<endl;
 	//port1 = stoi(argv[3]);
 	string conf_file = argv[3];
 	
@@ -438,7 +454,13 @@ int main(int argc, char* argv[]){
     server.sin_family = AF_INET;
     server.sin_port = htons(tracker_port[0]);
     server.sin_addr.s_addr = inet_addr(ip.c_str());
-    int tracker_status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
+    
+	int tracker_status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
+
+	if(tracker_status <= 0){
+		server.sin_port = htons(tracker_port[1]);
+		tracker_status = connect(svr_socket, (struct sockaddr*) &server, sizeof(server));
+	}
 	
 	while(1){
 		cout<<"1.Create User "<<endl;
@@ -495,9 +517,10 @@ int main(int argc, char* argv[]){
 			}*/		
 			cin>>log_option;
 			if(log_option == 4){
+				int g_id;
 				string dfpath,dstpath;
-				cin>>dfpath>>dstpath;
-				downloadFile(username, dfpath, dstpath, svr_socket, tracker_status);
+				cin>>g_id>>dfpath>>dstpath;
+				downloadFile(g_id,username, dfpath, dstpath, svr_socket, tracker_status);
 				//int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);
             }
 			else if(log_option == 5){

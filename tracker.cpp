@@ -16,6 +16,15 @@ int port = def_port;
 int fl = 0;
 string ip = def_ip;
 
+struct fileinfo{
+	string username;
+	string filename;
+	string sha;
+	string path;
+	int gid;
+};
+//file information
+vector<struct fileinfo> finfo;
 //map for saving in which groups user is
 map<string, vector<int>> usergroup;
 //map for saving user & password
@@ -54,6 +63,39 @@ map<string, pair<string, int>> peerinfo;
     }
     file.close();
 }*/
+
+//load fileinfo from the file
+void loadFinfo(){
+	cout<<"inside load info"<<endl;
+	ifstream file("finfo");
+	//struct fileinfo *temp = (struct fileinfo *)malloc(sizeof(struct fileinfo));
+	string fn;
+	string us;
+	string fp;
+	string sh;
+	int g;
+	while(!file.eof()){
+		if(file.tellg() == -1)
+			 break;
+		fileinfo temp;// = (struct fileinfo *)malloc(sizeof(struct fileinfo));
+		file>>g>>us>>fn>>fp>>sh;
+		cout<<g<<" "<<us<<" "<<fn<<" "<<fp<<" "<<sh<<endl;
+		temp.filename = fn;
+		temp.path = fp;
+		temp.username = us;
+		temp.sha = sh;
+		temp.gid = g;
+		cout<<"gid in lf "<<temp.gid<<endl;
+		finfo.push_back(temp);
+		
+	}
+	if(finfo.size() > 1){
+		finfo.pop_back();
+	}
+	file.close();
+	cout<<"leaving load info"<<endl;
+
+}
 
 //method to parse the info file and set ip and port 
 void parseFile(char *filename, int tno){
@@ -322,19 +364,66 @@ void removeIpPort(string us){
     file.close();
 }
 
+//getting all the filepath for a gid
+vector<vector<string>> getPath(int gid, string fname){
+
+	map<string,bool> mems;
+	cout<<"inside get path"<<endl;
+	vector<vector<string>> peers;
+	for(auto mem: members){
+		cout<<"groups user "<<mem.first<<endl;
+	}
+	if(members.find(gid) != members.end()){
+		for(auto g: members[gid]){
+			mems[g] = true;
+		}
+		for(auto e: finfo){
+			if(mems.find(e.username) != mems.end() && active[e.username] == 1 && e.filename == fname){
+				vector<string> onepeer;
+				onepeer.push_back(e.path);
+				onepeer.push_back(peerinfo[e.username].first);
+				onepeer.push_back(to_string(peerinfo[e.username].second));
+				peers.push_back(onepeer);
+			}
+			
+    	}
+	cout<<"size of peers "<<peers.size()<<endl;
+	return peers;
+	}
+	cout<<"outside get path peers"<<endl;
+	return peers;
+}
+
 //download information send to peer
-void downloadFile(int client_socket, string us, string fname){
+void downloadFile(int client_socket,int gid, string us, string fname){
 	int peerport=11123;
+	char buffer[BUFF_SIZE];
+	int no_of_matches;
 	string peerip = "127.0.0.1";
 	string filepath = "test";
-	char buffer[BUFF_SIZE];
-	strcpy(buffer,filepath.c_str());
+	cout<<"inside download file"<<endl;
+	loadFinfo();
+	vector<vector<string>> peers = getPath(gid,fname);
+	no_of_matches = peers.size();
+	send(client_socket, &no_of_matches, sizeof(no_of_matches),0);
+	for(auto e : peers){
+		cout<<"peers info array "<<e[0]<<" "<<e[1]<<" "<<e[2]<<endl;
+		strcpy(buffer,e[0].c_str());
+    	send(client_socket, buffer, BUFF_SIZE,0);
+    	strcpy(buffer,e[1].c_str());
+    	send(client_socket, buffer,BUFF_SIZE,0);
+		peerport = stoi(e[2]);
+    	send(client_socket, &peerport, sizeof(peerport),0);
+	}
+	/*strcpy(buffer,filepath.c_str());
 	send(client_socket, buffer, BUFF_SIZE,0);
 	strcpy(buffer,peerip.c_str());
 	send(client_socket, buffer,BUFF_SIZE,0);
-	send(client_socket, &peerport, sizeof(peerport),0);
+	send(client_socket, &peerport, sizeof(peerport),0);*/
 
 }
+
+
 
 //thread for handling the client request
 void *clientHandler(void *arg){
@@ -393,7 +482,7 @@ void *clientHandler(void *arg){
 				recv(client_socket, Buffer, BUFF_SIZE, 0);
 				uip = Buffer;
 				recv(client_socket, &uport, sizeof(uport), 0);
-				ss = saveIpPort(us,uip,port);
+				ss = saveIpPort(us,uip,uport);
 				send(client_socket, &ss, sizeof(ss),0);
 				
             }
@@ -413,12 +502,14 @@ void *clientHandler(void *arg){
             }*/
         }
 		else if( option == 4){
+			int grp_i;
 			string reqfile;
+			recv(client_socket, &grp_i, sizeof(grp_i), 0);
 			recv(client_socket, Buffer, BUFF_SIZE, 0);
 			us = Buffer;
 			recv(client_socket, Buffer, BUFF_SIZE, 0);
 			reqfile = Buffer;
-			downloadFile(client_socket,us,reqfile);	
+			downloadFile(client_socket,grp_i,us,reqfile);	
 		}
 		else if( option == 5){
 			recv(client_socket, Buffer, BUFF_SIZE, 0);
