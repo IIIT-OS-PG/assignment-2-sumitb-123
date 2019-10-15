@@ -458,15 +458,23 @@ bool downloadFile(int g_id,string un, string fname, string dstpath, int svr_sock
 	
 }
 
+//calculate the sha of a file
+string shaCalculate(string filepath){
+	string sha = "";
+	return sha;
+}
+
 void listFiles(int group_id,int  svr_socket, int tracker_status){
 	ifstream file("finfo");
 	int gid;
 	string us, fpath, fname,sha;
-	while(!file.eof()){
-		if(file.tellg() == -1)
-			break;
+	while(true){
 		file>>gid >>us>>fname>>fpath>>sha;
-		cout<<gid<<" "<<us<<" "<<fname<<" "<<fpath<<" "<<sha<<endl;
+		if(file.eof())
+			break;
+		if(group_id == gid){
+			cout<<gid<<" "<<us<<" "<<fname<<" "<<fpath<<" "<<sha<<endl;
+		}
 	}
 }
 
