@@ -5,6 +5,8 @@
 #include<unistd.h>
 #include <string.h>
 #include <iostream>
+#include <stdio.h>
+#include <openssl/sha.h>
 #include<pthread.h>
 //#define port 9000
 #define BUFF_SIZE 1024
@@ -26,6 +28,8 @@ struct dstruct{
 	string dpath;
 	int  port;
 };
+
+string shaCalculate(string );
 
 void *fileRead(void *sock){
 	cout<<"inside the thread"<<endl;
@@ -371,7 +375,8 @@ string parseFilepath(string fpath){
 void uploadFile(int g_id,string un, string ufile, int svr_socket, int tracker_desc){
 	int option = 3;
 	string fpath = ufile;
-	string sha = "12345";
+	string sha;
+	sha = shaCalculate(fpath);
 	char buffer[BUFF_SIZE];
 	string fname = parseFilepath(ufile);
 	cout<<"fpath "<<fpath<<endl;
@@ -461,6 +466,24 @@ bool downloadFile(int g_id,string un, string fname, string dstpath, int svr_sock
 //calculate the sha of a file
 string shaCalculate(string filepath){
 	string sha = "";
+	unsigned char digest[SHA_DIGEST_LENGTH];
+    char mdString[SHA_DIGEST_LENGTH*2+1];
+    char fl[BUFF_SIZE];
+    int i = 0;
+    ifstream file(filepath);
+    while(!file.eof() && i < BUFF_SIZE)
+    {
+        file.get(fl[i]); //reading single character from file to array
+        i++;
+    }
+	//finding the SHA1 of the file
+    SHA1((unsigned char*)&fl, strlen(fl), (unsigned char*)&digest);
+
+    for(int i = 0; i < SHA_DIGEST_LENGTH; i++)
+         sprintf(&mdString[i*2], "%02x", (unsigned int)digest[i]);
+    cout<<mdString<<endl;
+	sha = mdString;
+
 	return sha;
 }
 
