@@ -458,6 +458,18 @@ bool downloadFile(int g_id,string un, string fname, string dstpath, int svr_sock
 	
 }
 
+void listFiles(int group_id,int  svr_socket, int tracker_status){
+	ifstream file("finfo");
+	int gid;
+	string us, fpath, fname,sha;
+	while(!file.eof()){
+		if(file.tellg() == -1)
+			break;
+		file>>gid >>us>>fname>>fpath>>sha;
+		cout<<gid<<" "<<us<<" "<<fname<<" "<<fpath<<" "<<sha<<endl;
+	}
+}
+
 //int socket(int domain, int type, int protocol);
 int main(int argc, char* argv[]){
 	
@@ -556,8 +568,8 @@ int main(int argc, char* argv[]){
 			cout<<"9.List request"<<endl;
 			cout<<"10.Accept Request"<<endl;
 			cout<<"11.Leave Group"<<endl;
-			/*cout<<""<<endl;
-			cout<<""<<endl;*/
+			cout<<"12.List Files"<<endl;
+			/*cout<<""<<endl;*/
 			/*cin>>st;
 			if(){
 				cout<<"Enter filepath "<<endl;
@@ -620,6 +632,11 @@ int main(int argc, char* argv[]){
                 int group_id;
                 cin>>group_id;
                 leaveGroup(group_id, username, svr_socket, tracker_status);
+            }
+			else if(log_option == 12){
+                int group_id;
+                cin>>group_id;
+                listFiles(group_id, svr_socket, tracker_status);
             }
 			}
 		}
