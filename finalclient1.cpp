@@ -352,6 +352,55 @@ void leaveGroup(int gid, string un, int svr_socket, int tracker_desc){
     }	
 }
 
+//extract file path and name
+string parseFilepath(string fpath){
+	int l;
+	l = fpath.size() -1;
+	string fname = "";
+	while(fpath[l]){
+		if(fpath[l] == '/'){
+			break;
+		}
+		fname = fpath[l] + fname;
+		l--;
+	}
+	return fname;
+}
+
+//upload filepath 
+void uploadFile(int g_id,string un, string ufile, int svr_socket, int tracker_desc){
+	int option = 3;
+	string fpath = ufile;
+	string sha = "12345";
+	char buffer[BUFF_SIZE];
+	string fname = parseFilepath(ufile);
+	cout<<"fpath "<<fpath<<endl;
+	cout<<"fname "<<fname<<endl;
+	bool status;
+	//sending the option
+	send(svr_socket,&option,sizeof(option),0);
+    //sending the group id of the requesting client
+    send(svr_socket,&g_id,sizeof(g_id),0);
+	//sending the filepath
+    strcpy(buffer,fpath.c_str());
+    send(svr_socket,buffer,BUFF_SIZE,0);
+    //sending the filename
+    strcpy(buffer,fname.c_str());
+    send(svr_socket,buffer,BUFF_SIZE,0);
+	//sending the sha of the file
+	strcpy(buffer,sha.c_str());
+    send(svr_socket,buffer,BUFF_SIZE,0);
+	recv(svr_socket,&status,sizeof(status),0);
+    if(status){
+        cout<<"file uploaded successfully"<<endl;
+    }
+    else{
+        cout<<"not able to upload the file"<<endl;
+    }
+
+}
+
+
 //download file from peer
 bool downloadFile(int g_id,string un, string fname, string dstpath, int svr_socket, int tracker_desc){
 	pthread_t td1;
@@ -516,7 +565,14 @@ int main(int argc, char* argv[]){
 				int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);
 			}*/		
 			cin>>log_option;
-			if(log_option == 4){
+			if(log_option == 3){
+                int g_id;
+                string ufpath;
+                cin>>ufpath>>g_id;
+                uploadFile(g_id,username, ufpath, svr_socket, tracker_status);
+                //int cstatus = pthread_create(&td1, NULL, peerClient,&filepath);
+            }
+			else if(log_option == 4){
 				int g_id;
 				string dfpath,dstpath;
 				cin>>g_id>>dfpath>>dstpath;

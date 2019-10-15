@@ -79,7 +79,7 @@ void loadFinfo(){
 			 break;
 		fileinfo temp;// = (struct fileinfo *)malloc(sizeof(struct fileinfo));
 		file>>g>>us>>fn>>fp>>sh;
-		cout<<g<<" "<<us<<" "<<fn<<" "<<fp<<" "<<sh<<endl;
+		//cout<<g<<" "<<us<<" "<<fn<<" "<<fp<<" "<<sh<<endl;
 		temp.filename = fn;
 		temp.path = fp;
 		temp.username = us;
@@ -423,7 +423,12 @@ void downloadFile(int client_socket,int gid, string us, string fname){
 
 }
 
-
+bool uploadFile(int gid, string fpath, string fname, string us, string sha){
+	ofstream file("finfo", ios::app);
+	file<<gid<<" "<<us<<" "<<fname<<" "<<fpath<<" "<<sha<<endl;
+	file.close();
+	return true;
+}
 
 //thread for handling the client request
 void *clientHandler(void *arg){
@@ -501,6 +506,24 @@ void *clientHandler(void *arg){
                 send(client_socket, &status, sizeof(status),0);
             }*/
         }
+		else if(option == 3){
+			int grp_id;
+			string ufpath;
+			string ufname;
+			string sha;
+			char buffer[BUFF_SIZE];
+			bool ustat;
+			recv(client_socket, &grp_id, sizeof(grp_id), 0);
+            recv(client_socket, buffer, BUFF_SIZE, 0);
+            ufpath = buffer;
+            recv(client_socket, buffer, BUFF_SIZE, 0);
+            ufname = buffer;
+			recv(client_socket, buffer, BUFF_SIZE, 0);
+            sha = buffer;
+            ustat = uploadFile(grp_id,ufpath, ufname, us,sha);
+			send(client_socket, &ustat, sizeof(ustat),0);
+		}
+
 		else if( option == 4){
 			int grp_i;
 			string reqfile;
